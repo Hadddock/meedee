@@ -1,0 +1,5 @@
+#ignore midis used for testing
+*Assets
+
+#ignore compiled bytecode
+*__pycache__
