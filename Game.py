@@ -59,9 +59,10 @@ CHANNEL_COLORS = [
 root = tkinter.Tk()
 root.withdraw()
 selectedMidi = None
+defaultLocation = os.getcwd() + os.sep + 'Assets' + os.sep + 'midi'
 while selectedMidi is None:
     try:
-        selectedMidi = MidiFile(filedialog.askopenfilename(filetypes=[("Midi files", ".mid")]))
+        selectedMidi = MidiFile(filedialog.askopenfilename(initialdir = defaultLocation , filetypes=[("Midi files", ".mid")]))
     except:
         print("please select a valid midi file")
     
@@ -95,6 +96,7 @@ class Platform(pygame.sprite.Sprite):
         self.velocity = velocity
         self.instrument = instrument
         self.offVelocity = offVelocity
+        self.sorted = False
         self.on = False
         # test for end of stage
         global STAGE_SIZE 
@@ -104,25 +106,36 @@ class Platform(pygame.sprite.Sprite):
         """Begin playing the platform's note."""
         if self.velocity == 0:
             Output.pitch_bend(self.note, self.channel) 
-        if self.on == False:
+        if not self.on:
             Output.set_instrument(self.instrument)
             Output.note_on(self.note, self.velocity // 2, self.channel)
             self.on = True
+        self.surf.fill((max(CHANNEL_COLORS[self.channel][0] -50,0),max(CHANNEL_COLORS[self.channel][1] - 50,0),max(CHANNEL_COLORS[self.channel][2] - 50,0)))
         return None
 
     def turn_note_off(self): 
         """Stop playing the platform's note.""" 
-        if self.on == True:
+        if self.on:
             Output.note_off(self.note, self.offVelocity, self.channel)
-            self.on = False
+        self.on = False  
+        self.surf.fill(CHANNEL_COLORS[self.channel]) 
         return None
 
 
+class PlatformCollection():
+    
+    def __init__(self,Platforms, LeftCollection):
+        self.LeftCollection = LeftCollection
+        self.RightCollection = None
+        self.min = Platforms[0].rect.left
+        self.max = Platforms[-1].rect.right
+        Platforms.sort(key=lambda x: x.rect.top, reverse=True)
+        self.Platforms = Platforms
 '''PLAYER CLASS-----------------------------------------------PLAYER CLASS'''
 
 
 class Player(pygame.sprite.Sprite):
-
+    
     def __init__(self):
         super().__init__() 
         self.size = SIZE
@@ -192,16 +205,11 @@ class Player(pygame.sprite.Sprite):
         x position and turns off all active notes that whose platform 
         no longer overlaps the Player's x position
         """ 
+        # [platform.turn_note_on() if (self.rect.right > platform.rect.left and self.rect.left < platform.rect.left + platform.rect.width) else platform.turn_note_off for platform in all_platforms]
         for platform in all_platforms:
             if self.rect.right > platform.rect.left and self.rect.left < platform.rect.left + platform.rect.width:
-                if platform.rect.width != STAGE_SIZE:
-                    if platform == self.currentPlatform:
                         platform.turn_note_on()
-                    else:
-                        platform.turn_note_on()
-                platform.on = True
-                
-            elif platform.rect.width != STAGE_SIZE:
+            elif platform.on:
                 platform.turn_note_off()
         return None
     
@@ -225,7 +233,7 @@ class Player(pygame.sprite.Sprite):
         # calculate acceleration and velocity
         self.acc.x += self.vel.x * FRIC
         self.vel += self.acc
-        #limit max falling speed
+        # limit max falling speed
         self.vel.y = min (self.vel.y, MAX_FALL_SPEED)
     
         # limit x velocity to TOP_SPEED
@@ -342,6 +350,7 @@ def process_midi(MidiFile):
             queue.append(platformData)
         elif msg.type == 'note_off' or (msg.type == 'note_on' and msg.velocity == 0):
             for queuedPlatform in queue:
+                # if note and channel match the corresponding note has been found, create the platform
                 if msg.note == queuedPlatform[1] and msg.channel == queuedPlatform[0]:
                     queue.remove(queuedPlatform)
                     currentPlatform = Platform(queuedPlatform[0], queuedPlatform[1], queuedPlatform[2], startTime, queuedPlatform[3], instrument, msg.velocity, queuedPlatform[4])
@@ -355,6 +364,39 @@ all_platforms = process_midi(selectedMidi)
 # Sprite Group
 all_sprites = pygame.sprite.Group()
 all_sprites.add(P1)
+platforms1 = []
+platforms2 = []
+platforms3 = []
+platforms4 = []
+platforms5 = []
+platforms6 = []
+for platform in all_platforms:
+    if platform.rect.left < STAGE_SIZE/6 and platform.sorted is not True :
+        platform.sorted = True
+        platforms1.append(platform)
+    if platform.rect.left < STAGE_SIZE/6 * 2 and platform.sorted is not True :
+        platform.sorted = True
+        platforms2.append(platform)
+    if platform.rect.left < STAGE_SIZE/6 * 3 and platform.sorted is not True :
+        platform.sorted = True
+        platforms3.append(platform)
+    if platform.rect.left < STAGE_SIZE/6 * 4 and platform.sorted is not True :
+        platform.sorted = True
+        platforms4.append(platform)
+    if platform.rect.left < STAGE_SIZE/6 * 5 and platform.sorted is not True :
+        platform.sorted = True
+        platforms5.append(platform)    
+    if platform.sorted is not True:
+        platforms6.append(platform)
+
+
+platforms1 = PlatformCollection(platforms1, None)
+platforms2 = PlatformCollection(platforms2, platforms1)
+platforms3 = PlatformCollection(platforms3, platforms2)
+platforms4 = PlatformCollection(platforms4, platforms3)
+platforms5 = PlatformCollection(platforms5, platforms4)
+platforms6 = PlatformCollection(platforms6, platforms5)
+
 
 all_platforms.sort(key=lambda x: x.rect.top, reverse=True)
 for platform in all_platforms:
@@ -365,7 +407,7 @@ for platform in all_platforms:
 def update_fps(FramePerSec):
     """Return current FPS"""
     FPS = str(int(FramePerSec.get_fps()))
-    font = pygame.font.SysFont("Times_New_Roman", 18)
+    font = pygame.font.SysFont("freesansbold.ttf", 18)
     FPS_DISPLAY = font.render(FPS, 1, (0, 0, 0))
     return FPS_DISPLAY
 
@@ -376,6 +418,7 @@ def segments_intersect(A, B, C, D):
     intersects the segment formed by C and D
     
     """
+
     def ccw(A, B, C):
         return (C.y - A.y) * (B.x - A.x) > (B.y - A.y) * (C.x - A.x) 
 
