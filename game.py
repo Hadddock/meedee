@@ -1,82 +1,26 @@
 import sys 
 import os
 import pygame 
+from constants import *
+from helper import *
 from pygame import midi
 from pygame.locals import *
 from mido import MidiFile
 import tkinter
 from tkinter import filedialog
 
-pygame.init()
-vec = pygame.math.Vector2 
-'''GLOBAL CONSTANTS---------------------------------------GLOBAL CONSTANTS'''
-# Height and Width of Display Surface
-HEIGHT = 1080
-WIDTH = 1980
-SCREENPOSITION = 0
 global STAGE_SIZE
-STAGE_SIZE = 0
-
-# Framerate
-FPS = 60
-# Player related constants
-ACC = .7
-FRIC = -0.035
-GRAVITY = .7
-JUMP_HEIGHT = -13
-TOP_SPEED = 8
-RUN_TOP_SPEED = 16
-MAX_FALL_SPEED = 80
-SIZE = 30
-# Colors
-PLAYER_COLOR = (12, 32, 19)
-BACKGROUND_COLOR = (250, 240, 240)
-RED = (213, 28, 60)
-YELLOW = (241, 191, 21)
-PURPLE = (147, 82, 168)
-ORANGE = (247, 118, 11)
-LIGHT_BLUE = (153, 198, 249)
-BUFF = (200, 177, 139)
-GREEN = (35, 234, 165)
-PURPLISH_PINK = (244, 131, 205)
-BLUE = (39, 108, 189)
-YELLOWISH_PINK = (245, 144, 128)
-VIOLET = (97, 65, 156)
-PURPLISH_RED = (184, 55, 115)
-GREENISH_YELLOW = (235, 221, 33)
-REDDISH_BROWN = (139, 28, 14)
-YELLOW_GREEN = (167, 220, 38)
-YELLOW_BROWN = (103, 63, 11)
-# Define array of channel colors
-CHANNEL_COLORS = [
-    RED, YELLOW, PURPLE, ORANGE,
-    LIGHT_BLUE, BUFF, GREEN, PURPLISH_PINK,
-    BLUE, YELLOWISH_PINK, VIOLET, PURPLISH_RED,
-    GREENISH_YELLOW, REDDISH_BROWN, YELLOW_GREEN, YELLOW_BROWN,
-    ]
-
-# File Explorer
-root = tkinter.Tk()
-root.withdraw()
-selectedMidi = None
-defaultLocation = os.getcwd() + os.sep + 'Assets' + os.sep + 'midi'
-while selectedMidi is None:
-    try:
-        selectedMidi = MidiFile(filedialog.askopenfilename(initialdir = defaultLocation , filetypes=[("Midi files", ".mid")]))
-    except:
-        print("please select a valid midi file")
-    
-all_platforms = []
-
-# noteRange
-maxNote = 0 
-minNote = 100000
-'''Platform CLASS---------------------------------------Platform CLASS'''
-
 
 class Platform(pygame.sprite.Sprite):
+    """A Platform generated from midi note data"""
 
     def __init__(self, channel, note, start, end, velocity, instrument, offVelocity, tempo):
+        """
+        Parameters:
+            channel (int) : 0-15 representing the channel the note is played on
+            note (int) : 0-127 representing note number 
+            start (int) : 0
+        """
         super().__init__()
         # global tempo
         self.lengthRatio = TOP_SPEED / tempo * (end - start)
@@ -110,7 +54,7 @@ class Platform(pygame.sprite.Sprite):
             Output.set_instrument(self.instrument)
             Output.note_on(self.note, self.velocity // 2, self.channel)
             self.on = True
-        self.surf.fill((max(CHANNEL_COLORS[self.channel][0] -50,0),max(CHANNEL_COLORS[self.channel][1] - 50,0),max(CHANNEL_COLORS[self.channel][2] - 50,0)))
+        self.surf.fill((max(CHANNEL_COLORS[self.channel][0] - 50, 0), max(CHANNEL_COLORS[self.channel][1] - 50, 0), max(CHANNEL_COLORS[self.channel][2] - 50, 0)))
         return None
 
     def turn_note_off(self): 
@@ -121,18 +65,26 @@ class Platform(pygame.sprite.Sprite):
         self.surf.fill(CHANNEL_COLORS[self.channel]) 
         return None
 
-
 class PlatformCollection():
     
-    def __init__(self,Platforms, LeftCollection):
-        self.LeftCollection = LeftCollection
-        self.RightCollection = None
-        self.min = Platforms[0].rect.left
-        self.max = Platforms[-1].rect.right
-        Platforms.sort(key=lambda x: x.rect.top, reverse=True)
-        self.Platforms = Platforms
-'''PLAYER CLASS-----------------------------------------------PLAYER CLASS'''
-
+    def __init__(self, LeftCollection):
+        self.right = None
+        
+        self.min = sys.maxsize
+        self.max = 0
+        self.platforms = []
+        self.active = False
+        self.left = LeftCollection
+        if self.left is None:
+            self.left = self
+        self.active = False
+        self.right = self
+    def append(self, Platform):
+        self.min = min(self.min, Platform.rect.left)
+        self.max = max(self.max,Platform.rect.right)
+        self.platforms.append(Platform)
+    def sort(self):
+        self.platforms.sort(key=lambda x: x.rect.top, reverse=True)
 
 class Player(pygame.sprite.Sprite):
     
@@ -150,39 +102,41 @@ class Player(pygame.sprite.Sprite):
 
     def platform_collision(self, newPosition):
         """
-        Return first platform the player collides with.
+        Return first platform the player collides with while moving to newPosition.
         If no platform is collided with, return None
         """
-        for platform in all_platforms:
-            if newPosition.x + self.rect.width > platform.rect.left and newPosition.x < platform.rect.left + platform.rect.width:
-
-                # points of line segments (A to B) (C to D)
-                A = vec(platform.rect.left, platform.rect.top)
-                B = vec(platform.rect.right, platform.rect.top)
-                
-                # bottom left corner
-                C = vec(self.pos[0], self.pos[1])
-                D = vec(newPosition[0], newPosition[1])
-                
-                # bottom right corner
-                E = vec(self.pos[0] + self.rect.width, self.pos[1])
-                F = vec(newPosition[0] + self.rect.width, newPosition[1])
-                
-                leftIntersection = segments_intersect(B, A, C, D)
-                
-                rightIntersection = segments_intersect(B, A, E, F)
-                # check if intersection with bottom left corner
-                if leftIntersection:
-                    self.onPlatform = True
-                    self.currentPlatform = platform
-                    return line_intersection((A, B), (C, D))
-                # check if intersection with bottom right corner
-                if rightIntersection:
-                    self.onPlatform = True
-                    self.currentPlatform = platform
-                    returnValue = line_intersection((A, B), (E, F)) 
-                    return (returnValue[0] - self.rect.width, returnValue[1])
-                                              
+        for PlatformCollection in all_platforms:
+            if PlatformCollection.active:
+                for platform in PlatformCollection.platforms:
+                    if newPosition.x + self.rect.width > platform.rect.left and newPosition.x < platform.rect.left + platform.rect.width:
+        
+                        # points of line segments (A to B) (C to D)
+                        A = vec(platform.rect.left, platform.rect.top)
+                        B = vec(platform.rect.right, platform.rect.top)
+                        
+                        # bottom left corner
+                        C = vec(self.pos[0], self.pos[1])
+                        D = vec(newPosition[0], newPosition[1])
+                        
+                        # bottom right corner
+                        E = vec(self.pos[0] + self.rect.width, self.pos[1])
+                        F = vec(newPosition[0] + self.rect.width, newPosition[1])
+                        
+                        leftIntersection = segments_intersect(B, A, C, D)
+                        
+                        rightIntersection = segments_intersect(B, A, E, F)
+                        # check if intersection with bottom left corner
+                        if leftIntersection:
+                            self.onPlatform = True
+                            self.currentPlatform = platform
+                            return line_intersection((A, B), (C, D))
+                        # check if intersection with bottom right corner
+                        elif rightIntersection:
+                            self.onPlatform = True
+                            self.currentPlatform = platform
+                            returnValue = line_intersection((A, B), (E, F)) 
+                            return (returnValue[0] - self.rect.width, returnValue[1])
+                                                  
         self.currentPlatform = None
         return newPosition
     
@@ -192,11 +146,13 @@ class Player(pygame.sprite.Sprite):
         Player's current position. If no platforms
         are directly below the player, return None.
         """ 
-        for platform in all_platforms:
-            if platform != self.currentPlatform:
-                if platform.rect.top == self.rect.bottom and (
-                    self.rect.left < platform.rect.right and self.rect.right > platform.rect.left):
-                    return platform
+        for PlatformCollection in all_platforms:
+            if PlatformCollection.active:
+                for platform in PlatformCollection.platforms:
+                    if platform != self.currentPlatform:
+                        if platform.rect.top == self.rect.bottom and (
+                            self.rect.left < platform.rect.right and self.rect.right > platform.rect.left):
+                            return platform
         return None
 
     def get_notes(self):
@@ -206,11 +162,13 @@ class Player(pygame.sprite.Sprite):
         no longer overlaps the Player's x position
         """ 
         # [platform.turn_note_on() if (self.rect.right > platform.rect.left and self.rect.left < platform.rect.left + platform.rect.width) else platform.turn_note_off for platform in all_platforms]
-        for platform in all_platforms:
-            if self.rect.right > platform.rect.left and self.rect.left < platform.rect.left + platform.rect.width:
+        for PlatformCollection in all_platforms:
+            if PlatformCollection.active:
+                for platform in PlatformCollection.platforms:
+                    if self.rect.right > platform.rect.left and self.rect.left < platform.rect.left + platform.rect.width:
                         platform.turn_note_on()
-            elif platform.on:
-                platform.turn_note_off()
+                    elif platform.on:
+                        platform.turn_note_off()
         return None
     
     def move(self):
@@ -277,8 +235,8 @@ class Player(pygame.sprite.Sprite):
                 self.currentPlatform = self.find_adjacent_platforms()
         # determine note currently being played based on position
         self.get_notes()
-        global beforeHalfScreen
         
+        global beforeHalfScreen
         # adjust screen position for scrolling
         if self.pos.x > WIDTH / 2 + 10:
             global SCREENPOSITION 
@@ -300,44 +258,31 @@ class Player(pygame.sprite.Sprite):
             self.screenPos.x = WIDTH / 2
         return None
 
-    
-'''INITIALIZATION"""------------------------------------------INITIALIZATION'''
-FramePerSec = pygame.time.Clock()
-# Display
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Game")
-# WINDOW
-gameIcon = pygame.image.load(os.path.join(os.getcwd(), 'Assets', 'Icon.png')).convert()
-pygame.display.set_icon(gameIcon)
-# Players
-P1 = Player()
-
-# Midi parse
-midi.init()
-
-Output = pygame.midi.Output(0)
-Channels = []
-queue = [];
-
-'''MIDI PARSING-------------------------------------------------MIDI PARSING'''
-
-
 def process_midi(MidiFile):
-    "Generate an array of"
+    "Generate a list of platform collections from a MidiFile"
+    all_platforms = []
+    all_platform_collections = []
+    all_platform_collections.append(PlatformCollection(None))
+    for x in range (COLLECTIONS_COUNT-1):
+        all_platform_collections.append(PlatformCollection(all_platform_collections[x]))
+        all_platform_collections[x].right = all_platform_collections[x+1]
+    channel_pitches = []
+ 
+    
     instrument = 0
+    #x coordinate of platform
     x = -(WIDTH / 32)
     startTime = 0
+    #current tempo
     tempo = 500000
     global maxNote         
     global minNote
-    all_platforms = []
     for msg in MidiFile:
         if msg.type == 'note_on':
-            if msg.note > maxNote:
-                maxNote = msg.note
-            if msg.note < minNote:
-                minNote = msg.note
-                
+            maxNote = max(msg.note, maxNote)
+            minNote = min(msg.note, minNote)
+            
+ 
     for msg in MidiFile:
         startTime += msg.time
         if msg.type == 'set_tempo':
@@ -354,96 +299,71 @@ def process_midi(MidiFile):
                 if msg.note == queuedPlatform[1] and msg.channel == queuedPlatform[0]:
                     queue.remove(queuedPlatform)
                     currentPlatform = Platform(queuedPlatform[0], queuedPlatform[1], queuedPlatform[2], startTime, queuedPlatform[3], instrument, msg.velocity, queuedPlatform[4])
-                    all_platforms.append(currentPlatform)      
-        elif msg.type == 'pitch_bend':
-            all_platforms.append(Platform(msg.channel, msg.value, startTime, 0, 0, 0, 0))   
-    return all_platforms
+                    all_platforms.append(currentPlatform)
+                                  
+                    break
+        elif msg.type == 'pitchwheel':
+            #all_platforms.append(msg.channel,msg.note,msg.start,msg.start+1,0,msg.)
+            print('pitchbend')
+            #all_platform_collections.append(Platform(msg.channel, msg.value, startTime, 0, 0, 0, 0))
+    for platform in all_platforms:
+        for x in range(COLLECTIONS_COUNT):
+            if platform.rect.left < (STAGE_SIZE /(COLLECTIONS_COUNT) *( x+1)) or (x == COLLECTIONS_COUNT-1):
+                all_platform_collections[x].append(platform)
+                break
+    for x in range (COLLECTIONS_COUNT):
+        all_platform_collections[x].sort()
+    return all_platform_collections
 
+'''INITIALIZATION--------------------------------------------INITIALIZATION'''   
+pygame.init()
+FramePerSec = pygame.time.Clock()
+vec = pygame.math.Vector2 
+# File Explorer
+root = tkinter.Tk()
+root.withdraw()
+selectedMidi = None
+defaultLocation = os.getcwd() + os.sep + 'Assets' + os.sep + 'midi'
+while selectedMidi is None:
+    try:
+        file = filedialog.askopenfilename(initialdir=defaultLocation , title="Please select a midi file", filetypes=[("Midi files", ".mid")])
+        
+        selectedMidi = MidiFile(file)
+    except:
+        # exit if select file dialog closed
+        if file == "":
+            quit()
+        print("please select a valid midi file")
+    
+all_platforms = []
+
+# noteRange
+maxNote = 0 
+minNote = 100000
+
+# Display
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Game")
+# WINDOW
+gameIcon = pygame.image.load(os.path.join(os.getcwd(), 'Assets', 'Icon.png')).convert()
+pygame.display.set_icon(gameIcon)
+# Players
+P1 = Player()
+
+
+midi.init()
+
+Output = pygame.midi.Output(0)
+Channels = []
+queue = [];
 
 all_platforms = process_midi(selectedMidi)
 # Sprite Group
 all_sprites = pygame.sprite.Group()
 all_sprites.add(P1)
-platforms1 = []
-platforms2 = []
-platforms3 = []
-platforms4 = []
-platforms5 = []
-platforms6 = []
-for platform in all_platforms:
-    if platform.rect.left < STAGE_SIZE/6 and platform.sorted is not True :
-        platform.sorted = True
-        platforms1.append(platform)
-    if platform.rect.left < STAGE_SIZE/6 * 2 and platform.sorted is not True :
-        platform.sorted = True
-        platforms2.append(platform)
-    if platform.rect.left < STAGE_SIZE/6 * 3 and platform.sorted is not True :
-        platform.sorted = True
-        platforms3.append(platform)
-    if platform.rect.left < STAGE_SIZE/6 * 4 and platform.sorted is not True :
-        platform.sorted = True
-        platforms4.append(platform)
-    if platform.rect.left < STAGE_SIZE/6 * 5 and platform.sorted is not True :
-        platform.sorted = True
-        platforms5.append(platform)    
-    if platform.sorted is not True:
-        platforms6.append(platform)
-
-
-platforms1 = PlatformCollection(platforms1, None)
-platforms2 = PlatformCollection(platforms2, platforms1)
-platforms3 = PlatformCollection(platforms3, platforms2)
-platforms4 = PlatformCollection(platforms4, platforms3)
-platforms5 = PlatformCollection(platforms5, platforms4)
-platforms6 = PlatformCollection(platforms6, platforms5)
-
-
-all_platforms.sort(key=lambda x: x.rect.top, reverse=True)
-for platform in all_platforms:
-    all_sprites.add(platform)
-'''HELPER METHODS-----------------------------------------------------HELPER METHODS'''    
-
-
-def update_fps(FramePerSec):
-    """Return current FPS"""
-    FPS = str(int(FramePerSec.get_fps()))
-    font = pygame.font.SysFont("freesansbold.ttf", 18)
-    FPS_DISPLAY = font.render(FPS, 1, (0, 0, 0))
-    return FPS_DISPLAY
-
-
-def segments_intersect(A, B, C, D):
-    """
-    Return whether or not the segment formed by A and B
-    intersects the segment formed by C and D
-    
-    """
-
-    def ccw(A, B, C):
-        return (C.y - A.y) * (B.x - A.x) > (B.y - A.y) * (C.x - A.x) 
-
-    return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
-
-
-def line_intersection(line1, line2):
-    """Return the intersection point of line1 and line2"""
-    
-    xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
-    ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
-
-    def det(a, b):
-        return a[0] * b[1] - a[1] * b[0]
-
-    div = det(xdiff, ydiff)
-    if div == 0:
-        return None
-    d = (det(*line1), det(*line2))
-    x = det(d, xdiff) / div
-    y = det(d, ydiff) / div
-    return x, y
-
 
 '''MAIN LOOP-----------------------------------------------------MAIN LOOP'''
+
 while True:
     for event in pygame.event.get():
         if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
@@ -453,22 +373,29 @@ while True:
                 sys.exit()
     P1.move() 
     screen.fill(BACKGROUND_COLOR)
-    for entity in all_sprites:
-        if type(entity) == Platform:
-            # only blit platform within viewing distance
-            if entity.rect.width > WIDTH or (
-                entity.rect.right >= SCREENPOSITION - WIDTH / 2 and 
-                entity.rect.width + entity.rect.left <= SCREENPOSITION + WIDTH + WIDTH):
-                if SCREENPOSITION >= WIDTH / 2:
-                    entity.rect.left = entity.rect.left - SCREENPOSITION + WIDTH / 2 
-                    screen.blit(entity.surf, entity.rect)
-                    entity.rect.left = entity.rect.left + SCREENPOSITION - WIDTH / 2
-                else:
-                    screen.blit(entity.surf, entity.rect)
+    for PlatformCollection in all_platforms:
+        #if platform collection contains platforms within potential player collision, or if
+        #a neighboring platform collection is within potential player collision, set active and blit
+        if (PlatformCollection.min <= P1.pos.x + SIZE * 2 and PlatformCollection.max >= P1.pos.x - SIZE * 2) or (
+            PlatformCollection.left.min <= P1.pos.x + SIZE * 2 and PlatformCollection.left.max >= P1.pos.x - SIZE * 2) or (
+            PlatformCollection.right.min <= P1.pos.x + SIZE * 2 and PlatformCollection.right.max >= P1.pos.x - SIZE * 2):
             
-        elif type(entity) == Player:
-            entity.rect.left = (entity.screenPos.x)
-            screen.blit(entity.surf, entity.rect)
+            PlatformCollection.active = True
+            for Platform in PlatformCollection.platforms:
+            # only blit platform within viewing distance
+                # if  Platform.rect.right >= SCREENPOSITION - WIDTH / 2 and Platform.rect.left <= SCREENPOSITION + WIDTH + WIDTH:
+                    if SCREENPOSITION >= WIDTH / 2:
+                        Platform.rect.left = Platform.rect.left - SCREENPOSITION + WIDTH / 2 
+                        screen.blit(Platform.surf, Platform.rect)
+                        Platform.rect.left = Platform.rect.left + SCREENPOSITION - WIDTH / 2
+                    else:
+                        screen.blit(Platform.surf, Platform.rect)
+        else:
+            PlatformCollection.active = False   
+    #blit player
+    P1.rect.left = (P1.screenPos.x)
+    screen.blit(P1.surf, P1.rect)
+            
     # update fps counter
     screen.blit(update_fps(FramePerSec), (10, 0))
     # Line marking center screen
