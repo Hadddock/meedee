@@ -1,10 +1,6 @@
-<<<<<<< HEAD
-# meedee
-meedee is a platformer game with stages created from midi files. Run the program, select a Midi file, and run through the stage playing the sequenced notes as you go.
-=======
 # Overview
 meedee is a program that converts MIDI music sequence files into platforming stages, letting you play the file as you run through it triggering notes.
-
+[![meedee demo New Horizons](images/youtubelink.png)](http://www.youtube.com/watch?v=nwZ-B55gXpc  "meedee demo - Animal Crossing: New Horizons - Welcome Horizon")
 # How to use
 ## If you already have [Python](https://www.python.org/) and [pip](https://pypi.org/project/pip/) installed
 1. Install the pygame modules mido and pygame from the command line with pip install mido and pip install pygame
@@ -17,4 +13,4 @@ I have also compiled an executable with pyinstaller to run the program on Window
 1. Download the zipped folder meedee.zip and extract the contents of the folder
 1. Run meedee.exe
 1. Select a midi file from the file browser
->>>>>>> 3e64acd1110d2d7ec09d75c876093bbe61e24445
+
