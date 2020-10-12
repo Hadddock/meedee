@@ -8,7 +8,7 @@ meedee is a program that converts MIDI music sequence files into platforming sta
 1. Run meedee.py from the cloned repository
 1. Select a midi file from the file browser
 ## Windows
-I have also compiled anexecutable with pyinstaller to run the program on Windows. 
+I have also compiled an executable with pyinstaller to run the program on Windows. 
 1. Go to the releases section
 1. Download the zipped folder meedee.zip and extract the contents of the folder
 1. Run meedee.exe
