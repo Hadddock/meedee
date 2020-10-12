@@ -1,6 +1,3 @@
-# meedee
-meedee is a platformer game with stages created from midi files. Run the program, select a Midi file, and run through the stage playing the sequenced notes as you go.
-
 # Overview
 meedee is a program that converts MIDI music sequence files into platforming stages, letting you play the file as you run through it triggering notes.
 
