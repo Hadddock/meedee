@@ -13,7 +13,6 @@ global STAGE_SIZE
 
 class Platform(pygame.sprite.Sprite):
     """A Platform generated from midi note data"""
-
     def __init__(self, channel, note, start, end, velocity, instrument, offVelocity, tempo):
         """
         Parameters:
@@ -64,7 +63,11 @@ class Platform(pygame.sprite.Sprite):
         self.on = False  
         self.surf.fill(CHANNEL_COLORS[self.channel]) 
         return None
-
+class pitchBend(Platform):
+    def turn_note_on(self): 
+        Output.pitch_bend(self.note, self.channel)
+    def turn_note_off(self):
+        pass
 class PlatformCollection():
     
     def __init__(self, LeftCollection):
@@ -300,11 +303,12 @@ def process_midi(MidiFile):
                     queue.remove(queuedPlatform)
                     currentPlatform = Platform(queuedPlatform[0], queuedPlatform[1], queuedPlatform[2], startTime, queuedPlatform[3], instrument, msg.velocity, queuedPlatform[4])
                     all_platforms.append(currentPlatform)
-                                  
+       
                     break
         elif msg.type == 'pitchwheel':
-            #all_platforms.append(msg.channel,msg.note,msg.start,msg.start+1,0,msg.)
-            print('pitchbend')
+            all_platforms.append(pitchBend(msg.channel,msg.pitch,startTime,startTime,0,0,0,tempo))
+            pass
+            
             #all_platform_collections.append(Platform(msg.channel, msg.value, startTime, 0, 0, 0, 0))
     for platform in all_platforms:
         for x in range(COLLECTIONS_COUNT):
