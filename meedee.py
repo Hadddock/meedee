@@ -10,6 +10,7 @@ import tkinter
 from tkinter import filedialog
 
 global STAGE_SIZE
+STAGE_SIZE = 0
 
 def resource_path(relative_path):
     try:
@@ -267,6 +268,8 @@ class Player(pygame.sprite.Sprite):
             if self.pos.x > STAGE_SIZE - SIZE :
                 self.pos.x = STAGE_SIZE - SIZE
             self.screenPos.x = WIDTH / 2
+        if self.pos.x < 0:
+            self.pos.x = 0
         return None
 
 def process_midi(MidiFile):

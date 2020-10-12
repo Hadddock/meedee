@@ -7,7 +7,7 @@ Created on Oct 11, 2020
 HEIGHT = 1080
 WIDTH = 1980
 SCREENPOSITION = 0
-STAGE_SIZE = 0
+
 
 # Framerate
 FPS = 60
