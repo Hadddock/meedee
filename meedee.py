@@ -1,6 +1,6 @@
 import sys 
 import os
-import pygame 
+
 from constants import *
 from helper import *
 from pygame import midi
@@ -11,6 +11,14 @@ from tkinter import filedialog
 
 global STAGE_SIZE
 
+def resource_path(relative_path):
+    try:
+    # PyInstaller creates a temp folder and stores path in _MEIPASS
+        pass
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 class Platform(pygame.sprite.Sprite):
     """A Platform generated from midi note data"""
     def __init__(self, channel, note, start, end, velocity, instrument, offVelocity, tempo):
@@ -269,9 +277,7 @@ def process_midi(MidiFile):
     for x in range (COLLECTIONS_COUNT-1):
         all_platform_collections.append(PlatformCollection(all_platform_collections[x]))
         all_platform_collections[x].right = all_platform_collections[x+1]
-    channel_pitches = []
  
-    
     instrument = 0
     #x coordinate of platform
     x = -(WIDTH / 32)
@@ -349,8 +355,8 @@ minNote = 100000
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Game")
 # WINDOW
-gameIcon = pygame.image.load(os.path.join(os.getcwd(), 'Assets', 'Icon.png')).convert()
-pygame.display.set_icon(gameIcon)
+#gameIcon = pygame.image.load(os.path.join(os.getcwd(), 'Assets', 'Icon.png')).convert()
+#pygame.display.set_icon(gameIcon)
 # Players
 P1 = Player()
 
@@ -401,7 +407,7 @@ while True:
     screen.blit(P1.surf, P1.rect)
             
     # update fps counter
-    screen.blit(update_fps(FramePerSec), (10, 0))
+    #screen.blit(update_fps(FramePerSec), (10, 0))
     # Line marking center screen
     # r = pygame.draw.line(screen, (0,0,0), ( WIDTH/2,0),( WIDTH/2, HEIGHT),2)
     pygame.display.update()

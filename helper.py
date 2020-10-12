@@ -5,7 +5,7 @@ Created on Oct 11, 2020
 @author: justi
 '''
 
-
+ 
 def update_fps(FramePerSec):
     """Return current FPS"""
     FPS = str(int(FramePerSec.get_fps()))
