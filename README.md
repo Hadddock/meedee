@@ -1,3 +1,5 @@
+![]() 
+<img src="images/Logo.png" alt="drawing" width="320"/>
 # Overview
 meedee is a program that converts MIDI music sequence files into platforming stages, letting you play the file as you run through it triggering notes.
 # Demo Video <br />
