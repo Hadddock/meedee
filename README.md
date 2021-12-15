@@ -3,7 +3,7 @@
 # Overview
 meedee is a program that converts MIDI music sequence files into platforming stages, letting you play the file as you run through it triggering notes.
 # Demo Video <br />
-[![meedee demo Door Into Summer](images/youtubelink.png)](https://www.youtube.com/watch?v=c73psI_pG4U  "meedee demo - Knuckles Chaotix - Door Into Summer")
+[![meedee demo New Horizons](images/youtubelink.png)](https://www.youtube.com/watch?v=nwZ-B55gXpc  "meedee demo - Animal Crossing: New Horizons - Welcome Horizon")
 # How to use
 ## If you already have [Python](https://www.python.org/) and [pip](https://pypi.org/project/pip/) installed
 1. Install the pygame modules mido and pygame from the command line with pip install mido and pip install pygame
